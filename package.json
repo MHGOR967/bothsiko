@@ -1,5 +1,5 @@
 {
-  "name": "lrqabot_nodejs",
+  "name": "urlcambot_nodejs",
   "version": "1.0.0",
   "description": "Telegram bot converted from PHP to Node.js",
   "main": "index.js",
